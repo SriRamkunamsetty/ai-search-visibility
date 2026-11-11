@@ -83,10 +83,12 @@ class AuditWorker:
                 return 0
 
             task_ids = [t["id"] for t in tasks]
-            conn.execute(
-                f"UPDATE audit_tasks SET status='processing', updated_at=? WHERE id IN ({','.join('?' for _ in task_ids)})",
-                [now_iso()] + task_ids
-            )
+            now_ts = now_iso()
+            for tid in task_ids:
+                conn.execute(
+                    "UPDATE audit_tasks SET status='processing', updated_at=? WHERE id=?",
+                    (now_ts, tid),
+                )
             conn.commit()
 
             llm = self.llm_factory() if self.llm_factory else None

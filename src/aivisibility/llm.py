@@ -13,9 +13,11 @@ class LLMError(RuntimeError):
 
 
 def _post(url, headers, body):
+    if not url.startswith(("http://", "https://")):
+        raise ValueError(f"Unsupported URL scheme: {url}")
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:  # nosec B310
             return resp.status, resp.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read().decode("utf-8", "replace")
