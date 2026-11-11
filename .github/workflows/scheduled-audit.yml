@@ -1,0 +1,61 @@
+name: Automated Visibility Audit & Drift Monitor
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # Runs every morning at 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: "Number of samples per prompt"
+        required: true
+        default: "5"
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  run-audit:
+    name: Execute Model Visibility Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Package
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+
+      - name: Run Demo Audit & Generate Report
+        run: |
+          python -m aivisibility.cli audit list --demo > audit_history.txt
+          python -m aivisibility.cli report --demo --format json > visibility_report.json
+          python -m aivisibility.cli eval drift --demo --run1 1 --run2 1 > drift_analysis.txt
+
+      - name: Publish Audit Summary to Job Log
+        run: |
+          echo "### 📊 Automated AI-Search Visibility Audit Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat audit_history.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "### 📈 Statistical Drift Monitoring" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat drift_analysis.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: visibility-audit-${{ github.run_id }}
+          path: |
+            visibility_report.json
+            audit_history.txt
+            drift_analysis.txt
+          retention-days: 30

@@ -8,6 +8,8 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 from .ai_visibility import answer_details, audit_diff, get_audit_run, list_audit_runs, visibility_report
+from .observability import METRICS, logger
+from .ml.drift import calculate_psi, detect_visibility_anomalies
 
 MAX_BODY = 20_000
 HEADERS = {"X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "Cache-Control": "no-store",
@@ -41,8 +43,16 @@ class App:
         with self.lock:
             if p == "/":
                 return 200, "text/html; charset=utf-8", PAGE.encode()
-            if p == "/healthz":
-                return _json({"ok": True})
+            if p in ("/healthz", "/livez"):
+                return _json({"ok": True, "status": "alive"})
+            if p == "/readyz":
+                try:
+                    self.conn.execute("SELECT 1").fetchone()
+                    return _json({"ok": True, "status": "ready", "database": "healthy"})
+                except Exception as db_err:
+                    return _json({"ok": False, "status": "unhealthy", "error": str(db_err)}, 503)
+            if p == "/metrics":
+                return 200, "text/plain; version=0.0.4; charset=utf-8", METRICS.to_prometheus_text().encode()
             if p == "/api/meta":
                 return _json(self.meta())
             if p == "/api/ai":
@@ -61,6 +71,32 @@ class App:
                     return _json({"error": "missing or invalid a and b run id parameters"}, 400)
                 try:
                     return _json(audit_diff(self.conn, int(ra), int(rb)))
+                except ValueError as err:
+                    return _json({"error": str(err)}, 404)
+            if p == "/api/eval/drift":
+                ra = q.get("a", [""])[0]
+                rb = q.get("b", [""])[0]
+                if not (ra.isdigit() and rb.isdigit()):
+                    return _json({"error": "missing or invalid a and b run id parameters"}, 400)
+                try:
+                    d = audit_diff(self.conn, int(ra), int(rb))
+                    titles = [t for t in d.get("titles", []) if t.get("status") == "compared"]
+                    base_rel = {t["name"]: (t.get("release_rate_a") or 0.0) for t in titles}
+                    curr_rel = {t["name"]: (t.get("release_rate_b") or 0.0) for t in titles}
+                    base_mr = [t.get("mention_rate_a") or 0.0 for t in titles]
+                    curr_mr = [t.get("mention_rate_b") or 0.0 for t in titles]
+
+                    psi = calculate_psi(base_mr, curr_mr) if base_mr else 0.0
+                    anomalies = detect_visibility_anomalies(base_rel, curr_rel)
+
+                    return _json({
+                        "run_a": d["run_a"],
+                        "run_b": d["run_b"],
+                        "psi_mention_rate": psi,
+                        "drift_level": "significant" if psi >= 0.25 else "moderate" if psi >= 0.1 else "stable",
+                        "anomalies": anomalies,
+                        "titles_compared": len(titles)
+                    })
                 except ValueError as err:
                     return _json({"error": str(err)}, 404)
             mm = re.fullmatch(r"/api/answers/(\d+)", p)
@@ -90,6 +126,7 @@ def make_handler(app):
                 self.send_header(k, v)
             self.end_headers()
             self.wfile.write(body)
+            METRICS.inc_counter("aivisibility_requests_total", 1.0, {"endpoint": self.path.split("?")[0], "status": str(status)})
 
         def do_GET(self):
             self._run("GET")

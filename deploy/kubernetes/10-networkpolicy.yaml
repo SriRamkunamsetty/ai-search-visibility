@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: aivisibility-network-policy
+  namespace: aivisibility
+  labels:
+    app.kubernetes.io/name: aivisibility
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: aivisibility
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic to API port 8000 from Ingress controller and Prometheus
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow outbound HTTPS to LLM APIs (Anthropic, Gemini, OpenAI)
+    - ports:
+        - protocol: TCP
+          port: 443
+    # Allow Postgres connection inside cluster
+    - ports:
+        - protocol: TCP
+          port: 5432
+    # Allow Redis connection inside cluster
+    - ports:
+        - protocol: TCP
+          port: 6379

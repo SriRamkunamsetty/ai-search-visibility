@@ -35,3 +35,16 @@ CREATE TABLE IF NOT EXISTS audit_runs (
   calls_made INTEGER DEFAULT 0,
   summary_json TEXT
 );
+CREATE TABLE IF NOT EXISTS audit_tasks (
+  id {PK},
+  audit_run_id BIGINT,
+  title_id BIGINT NOT NULL REFERENCES titles(id),
+  model TEXT NOT NULL,
+  prompt_key TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  sample_no INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  retries INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);

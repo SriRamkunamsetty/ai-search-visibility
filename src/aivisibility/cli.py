@@ -67,6 +67,21 @@ def build_parser():
     au_sch.add_argument("--model"); au_sch.add_argument("--interval", type=int, default=3600, help="interval in seconds between audits")
     au_sch.add_argument("--iterations", type=int, default=0, help="max iterations (0 for unlimited)")
     au_sch.add_argument("--yes", action="store_true", help="confirm API spend")
+
+    # Distributed background worker
+    wk = sub.add_parser("worker", parents=[common], help="run background audit task worker")
+    wk.add_argument("--concurrency", type=int, default=4, help="worker thread concurrency")
+    wk.add_argument("--poll-interval", type=float, default=2.0, help="queue polling interval in seconds")
+
+    # AI/ML evaluations & drift
+    ev = sub.add_parser("eval", parents=[common], help="AI/ML evaluations: semantic faithfulness, judge rubrics, and drift")
+    ev_sub = ev.add_subparsers(dest="eval_cmd", required=True)
+    ev_sem = ev_sub.add_parser("semantic", parents=[common], help="calculate semantic premise faithfulness")
+    ev_sem.add_argument("--reference", required=True, help="ground-truth reference text")
+    ev_sem.add_argument("--candidate", required=True, help="model generated candidate text")
+    ev_drift = ev_sub.add_parser("drift", parents=[common], help="detect visibility drift and anomalies between audit runs")
+    ev_drift.add_argument("--run1", type=int, required=True, help="baseline audit run ID")
+    ev_drift.add_argument("--run2", type=int, required=True, help="current audit run ID")
     return p
 
 
@@ -185,6 +200,37 @@ def _dispatch(a):
                     time.sleep(a.interval)
             except KeyboardInterrupt:
                 print("\nScheduler interrupted by user. Exiting.")
+    elif a.cmd == "worker":
+        from .worker import AuditWorker
+        target = ":memory:" if getattr(a, "demo", False) else a.db
+        worker = AuditWorker(target, concurrency=a.concurrency, poll_interval=a.poll_interval)
+        worker.start()
+    elif a.cmd == "eval":
+        if a.eval_cmd == "semantic":
+            from .ml.semantic import semantic_faithfulness
+            scores = semantic_faithfulness(a.reference, a.candidate)
+            print(json.dumps(scores, indent=2))
+        elif a.eval_cmd == "drift":
+            from .ml.drift import calculate_psi, detect_visibility_anomalies
+            conn = open_db(a)
+            d = audit_diff(conn, a.run1, a.run2)
+            titles = [t for t in d.get("titles", []) if t.get("status") == "compared"]
+            base_rel = {t["name"]: (t.get("release_rate_a") or 0.0) for t in titles}
+            curr_rel = {t["name"]: (t.get("release_rate_b") or 0.0) for t in titles}
+            base_mr = [t.get("mention_rate_a") or 0.0 for t in titles]
+            curr_mr = [t.get("mention_rate_b") or 0.0 for t in titles]
+
+            psi = calculate_psi(base_mr, curr_mr) if base_mr else 0.0
+            anomalies = detect_visibility_anomalies(base_rel, curr_rel)
+            drift_level = "SIGNIFICANT" if psi >= 0.25 else "MODERATE" if psi >= 0.1 else "STABLE"
+
+            print(f"Distributional PSI (Mention Rate): {psi:.4f} -> [{drift_level}]")
+            if anomalies:
+                print(f"\nDetected {len(anomalies)} title anomaly alert(s):")
+                for an in anomalies:
+                    print(f"  [{an['severity'].upper()}] {an['title']}: {an['delta']:+.1%} delta (z={an['z_score']}) -> {an['direction']}")
+            else:
+                print("\nNo statistically significant title anomalies detected.")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aivisibility
+  labels:
+    app.kubernetes.io/name: aivisibility
+    app.kubernetes.io/part-of: ai-search-visibility
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
