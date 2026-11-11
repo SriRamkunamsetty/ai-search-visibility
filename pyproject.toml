@@ -16,5 +16,18 @@ ner = ["spacy>=3.7"]
 [project.scripts]
 aivisibility = "aivisibility.cli:main"
 
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",
+    "E701",
+    "E702",
+    "E402",
+]
+
 [tool.setuptools.package-data]
 aivisibility = ["schema.sql"]

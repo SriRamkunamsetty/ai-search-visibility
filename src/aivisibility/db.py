@@ -1,7 +1,6 @@
 """Database layer. SQLite for dev/tests, Postgres for production (optional `psycopg`).
 All SQL in the package is written once, with `?` placeholders and ON CONFLICT upserts, and
 translated for Postgres by PgConn. Postgres support is NOT exercised by the test suite here."""
-import re
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,7 +22,7 @@ def translate(sql: str) -> str:
 
 
 def split_statements(script: str):
-    body = "\n".join(l for l in script.splitlines() if not l.strip().startswith("--"))
+    body = "\n".join(line for line in script.splitlines() if not line.strip().startswith("--"))
     return [s.strip() for s in body.split(";") if s.strip()]
 
 

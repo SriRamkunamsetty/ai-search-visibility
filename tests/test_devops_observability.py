@@ -8,7 +8,6 @@ from http.server import ThreadingHTTPServer
 
 from aivisibility.cli import main
 from aivisibility.db import connect, get_or_create_title, now_iso
-from aivisibility.observability import METRICS
 from aivisibility.sample_data import seed_all
 from aivisibility.web import App, make_handler
 from aivisibility.worker import AuditWorker

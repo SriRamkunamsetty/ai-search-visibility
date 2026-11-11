@@ -23,6 +23,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Normalize Lowercase Image Name
+        run: echo "IMAGE_LOWER=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
       - name: Set up QEMU (Multi-Arch)
         uses: docker/setup-qemu-action@v3
 
@@ -40,11 +43,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_LOWER }}
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha,format=short
+            type=sha,format=long
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
@@ -58,9 +61,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@0.18.0
+        uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          image-ref: ${{ env.IMAGE_LOWER }}:sha-${{ github.sha }}
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"

@@ -2,7 +2,7 @@
 Implements Population Stability Index (PSI), 1D Wasserstein Earth Mover's Distance,
 and MAD-based anomaly detection across model version releases."""
 import math
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Sequence
 
 
 def calculate_psi(
@@ -11,7 +11,7 @@ def calculate_psi(
     epsilon: float = 1e-4
 ) -> float:
     """Compute Population Stability Index (PSI) between two discrete probability distributions.
-    
+
     Interpretations:
         PSI < 0.1: No significant drift (stable)
         0.1 <= PSI < 0.25: Moderate drift / subtle shift
@@ -42,7 +42,7 @@ def calculate_psi(
 
 def wasserstein_distance_1d(u_values: Sequence[float], v_values: Sequence[float]) -> float:
     """Compute the 1D Wasserstein distance (Earth Mover's Distance) between two empirical distributions.
-    
+
     Measures the minimal work required to transform distribution U into distribution V.
     """
     if not u_values or not v_values:
@@ -80,7 +80,7 @@ def detect_visibility_anomalies(
     threshold_z: float = 2.0
 ) -> List[Dict[str, object]]:
     """Detect significant accuracy or visibility anomalies across tracked titles.
-    
+
     Flags titles whose performance deviates significantly from baseline expectations.
     """
     anomalies: List[Dict[str, object]] = []

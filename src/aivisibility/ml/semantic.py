@@ -22,7 +22,7 @@ def extract_ngrams(tokens: List[str], n: int = 2) -> List[str]:
 
 class TfidfScorer:
     """Dependency-free TF-IDF and n-gram cosine similarity vectorizer.
-    
+
     Uses sublinear term frequency (1 + log(tf)) and smoothed inverse document frequency
     log((1 + N) / (1 + df)) + 1 with Euclidean (L2) unit vector normalization.
     """
@@ -120,7 +120,7 @@ def dense_cosine_similarity(vec_a: Sequence[float], vec_b: Sequence[float]) -> f
 
 def semantic_faithfulness(reference: str, candidate: str) -> Dict[str, float]:
     """Calculates factual and semantic alignment between a ground-truth premise and generated answer.
-    
+
     Returns:
         cosine_similarity: Lexical unigram TF-IDF similarity (0.0 to 1.0)
         token_recall: Fraction of reference keywords captured in candidate

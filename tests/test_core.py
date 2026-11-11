@@ -1,23 +1,14 @@
-import contextlib
 import csv
-import io
 import json
-import os
 import tempfile
 import threading
 import unittest
-import urllib.error
-import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlsplit
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from aivisibility.ai_visibility import (answer_details, estimate_calls, find_dates, get_ner_backend, names_in, release_verdict, run_visibility, set_ner_backend, visibility_report)
-from aivisibility.catalog import import_facts_csv
-from aivisibility.cli import main
+from aivisibility.ai_visibility import (estimate_calls, find_dates, names_in, release_verdict, run_visibility, set_ner_backend, visibility_report)
 from aivisibility.db import connect, get_or_create_title
 from aivisibility.llm import AnthropicLLM, GeminiLLM, OllamaLLM, OpenAILLM, VLLMLLM, get_llm
 from aivisibility.sample_data import seed_all
-from aivisibility.web import App, make_handler
 
 
 def tmp_csv(header, rows):
@@ -51,7 +42,8 @@ class AIVisibility(unittest.TestCase):
         self.assertNotIn("Monday", found)
 
         # Test custom pluggable NER backend
-        mock_backend = lambda t: ["Extracted Person One", "Non Person Org"]
+        def mock_backend(t):
+            return ["Extracted Person One", "Non Person Org"]
         try:
             set_ner_backend(mock_backend)
             res = names_in("Any text", "The Film")
@@ -137,7 +129,7 @@ class RealHttpTransports(unittest.TestCase):
 
     def test_openai_ollama_vllm_default_transport(self):
         def fn(method, path, headers, body):
-            data = json.loads(body)
+            _data = json.loads(body)
             assert path.endswith("/chat/completions")
             assert headers["content-type"] == "application/json"
             if "Bearer sk-openai" in headers.get("authorization", ""):

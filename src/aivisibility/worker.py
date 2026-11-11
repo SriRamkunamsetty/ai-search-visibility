@@ -1,14 +1,11 @@
 """Asynchronous background worker and task queue for distributed high-throughput audit execution.
 Enables Kubernetes worker pods to scale independently from API frontends."""
-import os
 import signal
-import sys
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
-from .ai_visibility import ask, facts_for, run_audit
+from .ai_visibility import ask
 from .db import connect, now_iso
 from .observability import METRICS, logger
 

@@ -1,7 +1,7 @@
 """Fuzzy entity resolution, Jaro-Winkler & Levenshtein metrics, and entity linking (dependency-free).
 Prevents false-positive hallucination flags when models use nicknames, alternate spellings, or stripped diacritics."""
 import unicodedata
-from typing import List, Optional, Set, Tuple
+from typing import Optional, Sequence, Tuple
 
 
 def strip_accents(text: str) -> str:
@@ -114,7 +114,7 @@ def match_entity(
     threshold: float = 0.85
 ) -> Tuple[bool, Optional[str], float]:
     """Check if a candidate entity name matches any ground-truth entity using fuzzy resolution.
-    
+
     Returns:
         (is_match, matched_truth_name, highest_score)
     """

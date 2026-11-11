@@ -7,7 +7,6 @@ from aivisibility.ml.ner import (
     levenshtein_similarity,
     match_entity,
     strip_accents,
-    token_sort_similarity,
 )
 from aivisibility.ml.semantic import (
     TfidfScorer,

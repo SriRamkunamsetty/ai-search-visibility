@@ -8,7 +8,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 from .ai_visibility import answer_details, audit_diff, get_audit_run, list_audit_runs, visibility_report
-from .observability import METRICS, logger
+from .observability import METRICS
 from .ml.drift import calculate_psi, detect_visibility_anomalies
 
 MAX_BODY = 20_000
